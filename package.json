@@ -1,0 +1,26 @@
+{
+  "name": "nnjs",
+  "version": "1.0.0",
+  "description": "simple neural network library (inspired by torch) written in vanilla js for study purposes.",
+  "main": "src/nn.js",
+  "scripts": {
+    "test": "node test/test.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/h4cku/nnjs.git"
+  },
+  "keywords": [
+    "nn",
+    "neural",
+    "network",
+    "autograd"
+  ],
+  "author": "me",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/h4cku/nnjs/issues"
+  },
+  "homepage": "https://github.com/h4cku/nnjs#readme",
+  "type": "module"
+}
