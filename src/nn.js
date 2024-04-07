@@ -260,12 +260,43 @@ class Tensor {
         }
         return new Tensor(new_data, [...this.shape]);
     }
+
+    static exp(m) {
+        return m.apply_unitary_op(Math.exp);
+    }
+
+    static log(m) {
+        return m.apply_unitary_op(Math.log);
+    }
 }
 
 // Backward Classes
 class NopBackward {
     constructor() {}
     call(loss) {}
+}
+
+class SumBackward {
+    constructor(x, axis) {
+        this.x = x;
+        this.axis = axis;
+    }
+    call(loss) {
+        let t_ = new Tensor(Array(this.x.val.data.length), this.x.val.shape);
+        t_.ones();
+        this.x.backward(t_.mul(loss));
+    }
+}
+
+class TimesBackward {
+    constructor(x, scale) {
+        this.x = x;
+        this.scale = scale;
+    }
+    call(loss) {
+        // loss * do/dx = loss * scale
+        this.x.backward(loss.times(this.scale));
+    }
 }
 
 class AddBackward {
@@ -307,8 +338,8 @@ class MulBackward {
         this.y = y;
     }
     call(loss) {
-        this.x.backward(loss.mul(y.val));
-        loss = loss.mul(x.val);
+        this.x.backward(loss.mul(this.y.val));
+        loss = loss.mul(this.x.val);
         for (let i = 0; i < this.y.val.stride.length; i++) {
             if (this.y.val.stride[i] == 0) {
                 loss = loss.sum(i);
@@ -356,7 +387,30 @@ class PowBackward {
         this.e = e;
     }
     call(loss) {
+        // loss * do/dx = loss * (e * x ^ (e-1)) = loss * e * o / x
         this.x.backward(loss.mul(this.o.val.div(this.x.val).times(this.e)));
+    }
+}
+
+class ExpBackward {
+    constructor(x, o) {
+        this.x = x;
+        this.o = o;
+    }
+    call(loss) {
+        // loss * do/dx = loss * exp(x)
+        this.x.backward(loss.mul(this.o.val));
+    }
+}
+
+class LogBackward {
+    constructor(x, o) {
+        this.x = x;
+        this.o = o;
+    }
+    call(loss) {
+        // loss * do/dx = loss * (1/x) = loss / x
+        this.x.backward(loss.div(this.x.val));
     }
 }
 
@@ -466,6 +520,10 @@ class Variable {
             this.grad.zeros();
         }
     }
+    times(scale) {
+        let new_val = this.val.times(scale);
+        return new Variable(new_val, new TimesBackward(this, scale));
+    }
     add(v) {
         let new_val = this.val.add(v.val);
         return new Variable(new_val, new AddBackward(this, v));
@@ -486,6 +544,10 @@ class Variable {
         let new_val = this.val.dot(v.val);
         return new Variable(new_val, new DotBackward(this, v));
     }
+    sum(axis) {
+        let new_val = this.val.sum(axis);
+        return new Variable(new_val, new SumBackward(this, axis));
+    }
     mean(axis) {
         let new_val = this.val.mean(axis);
         return new Variable(new_val, new MeanBackward(this, axis));
@@ -494,6 +556,18 @@ class Variable {
         let new_val = this.val.pow(e);
         let o = new Variable(new_val, new NopBackward());
         o.backward_hook = new PowBackward(this, o, e);
+        return o;
+    }
+    static exp(v) {
+        let new_val = Tensor.exp(v.val);
+        let o = new Variable(new_val, new NopBackward());
+        o.backward_hook = new ExpBackward(v, o);
+        return o;
+    }
+    static log(v) {
+        let new_val = Tensor.log(v.val);
+        let o = new Variable(new_val, new NopBackward());
+        o.backward_hook = new LogBackward(v, o);
         return o;
     }
     static sigmoid(v) {
@@ -534,7 +608,9 @@ class Loss {
         return o.sub(t).pow(2).mean(0).mean(1);
     }
 
-    static cross_entropy_loss() {}
+    static cross_entropy_loss(o, t) {
+        return t.mul(Variable.log(o)).mean(0).mean(1).times(-1);
+    }
 }
 
 // Optimizers
@@ -641,6 +717,19 @@ class SILU {
     }
 }
 
+class Softmax {
+    constructor() {}
+
+    parameters() {
+        return [];
+    }
+
+    forward(x) {
+        let expX = Variable.exp(x);
+        return expX.div(expX.sum(1));
+    }
+}
+
 class Sequential {
     constructor(layers) {
         this.layers = layers;
@@ -676,5 +765,6 @@ export {
     ReLU,
     GELU,
     SILU,
+    Softmax,
     Sequential,
 };
