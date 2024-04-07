@@ -17,9 +17,9 @@ import {
 
 let model = new Sequential([
     new Linear(2, 5),
-    new Sigmoid(),
+    new SILU(),
     new Linear(5, 5),
-    new Sigmoid(),
+    new SILU(),
     new Linear(5, 2),
     new Softmax(),
 ]);
@@ -27,7 +27,7 @@ let model = new Sequential([
 let x = new Variable(new Tensor([2, 3, 5, 6, 7, 9], [3, 2]), new NopBackward());
 let y = new Variable(new Tensor([1, 0, 0, 1, 0, 1], [3, 2]), new NopBackward());
 
-let optim = new SGD(model.parameters(), { lr: 1 });
+let optim = new SGD(model.parameters(), { lr: 0.1 });
 
 console.log(model.forward(x).val.data);
 let epochs = 100;
