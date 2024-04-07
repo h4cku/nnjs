@@ -403,17 +403,58 @@ class TanhBackward {
     }
 }
 
+class ReLUBackward {
+    constructor(x, o) {
+        this.x = x;
+        this.o = o;
+    }
+    helper(x) {
+        return x > 0 ? 1 : 0
+    }
+    call(loss) {
+        this.x.backward(loss.mul(this.o.val.apply_unitary_op(this.helper)))
+    }
+}
+
+class GELUBackward {
+    constructor(x, o) {
+        this.x = x;
+        this.o = o;
+    }
+    helper(x) {
+        let y = ActivationFunction.sigmoid(1.702 * x)
+        return y + x * 1.702 * (y * (1 - y))
+    }
+    call(loss) {
+        this.x.backward(loss.mul(this.x.val.apply_unitary_op(this.helper)))
+    }
+}
+
+class SILUBackward {
+    constructor(x, o) {
+        this.x = x;
+        this.o = o;
+    }
+    helper(x) {
+        let y = ActivationFunction.sigmoid(x)
+        return y + x * (y * (1 - y))
+    }
+    call(loss) {
+        this.x.backward(loss.mul(this.x.val.apply_unitary_op(this.helper)))
+    }
+}
+
 // Variable class 
 // This a wrapper for tensor objects to be able to perform autodifferntiation
 class Variable {
     constructor(t, backward_hook) {
         this.val = t;
-        if (this.backward_hook) {
+        if (backward_hook) {
             this.grad = null;
         } else {
             this.grad = new Tensor(Array(t.data.length), [...t.shape]);
+            this.grad.zeros();
         }
-        this.grad.zeros();
         this.backward_hook = backward_hook; // if this is null it means it is a leaf of the graph
     }
 
@@ -469,6 +510,24 @@ class Variable {
         let new_val = v.val.apply_unitary_op(ActivationFunction.tanh);
         let o = new Variable(new_val, new NopBackward());
         o.backward_hook = new TanhBackward(v, o);
+        return o;
+    }
+    static relu(v) {
+        let new_val = v.val.apply_unitary_op(ActivationFunction.relu);
+        let o = new Variable(new_val, new NopBackward());
+        o.backward_hook = new ReLUBackward(v, o);
+        return o;
+    }
+    static gelu(v) {
+        let new_val = v.val.apply_unitary_op(ActivationFunction.gelu);
+        let o = new Variable(new_val, new NopBackward());
+        o.backward_hook = new GELUBackward(v, o);
+        return o;
+    }
+    static silu(v) {
+        let new_val = v.val.apply_unitary_op(ActivationFunction.silu);
+        let o = new Variable(new_val, new NopBackward());
+        o.backward_hook = new SILUBackward(v, o);
         return o;
     }
 }
@@ -554,6 +613,48 @@ class Tanh {
     }
 }
 
+class ReLU {
+    constructor() {
+
+    }
+
+    parameters() {
+        return [];
+    }
+
+    forward(x) {
+        return Variable.relu(x)
+    }
+}
+
+class GELU {
+    constructor() {
+
+    }
+
+    parameters() {
+        return [];
+    }
+
+    forward(x) {
+        return Variable.gelu(x)
+    }
+}
+
+class SILU {
+    constructor() {
+
+    }
+
+    parameters() {
+        return [];
+    }
+
+    forward(x) {
+        return Variable.silu(x)
+    }
+}
+
 class Sequential {
     constructor(layers) {
         this.layers = layers;
@@ -582,20 +683,14 @@ export {
     Variable,
 
     NopBackward,
-    AddBackward,
-    SubBackward,
-    MulBackward,
-    DivBackward,
-    DotBackward,
-    PowBackward,
-    MeanBackward,
-    SigmoidBackward,
-    TanhBackward,
 
     Loss,
     SGD,
     Linear,
     Sigmoid,
     Tanh,
+    ReLU,
+    GELU,
+    SILU,
     Sequential
 }

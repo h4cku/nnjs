@@ -1,8 +1,10 @@
-const { Tensor, Sequential, Linear, Tanh, Variable, NopBackward, SGD, Loss } = await import("nnjs");
+// const { Tensor, Sequential, Linear, Tanh, Variable, NopBackward, SGD, Loss } = await import("nnjs");
+import { ReLU, Tensor, Sequential, Linear, Tanh, Variable, NopBackward, SGD, Loss, GELU, SILU, Sigmoid } from "nnjs";
+
 
 let model = new Sequential([
     new Linear(2, 3),
-    new Tanh(),
+    new Sigmoid(),
     new Linear(3, 1)
 ])
 
