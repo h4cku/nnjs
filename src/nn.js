@@ -1,3 +1,6 @@
+// Constants
+const DEFAULT_BATCH_SIZE = 128;
+
 // Activation Functions
 class ActivationFunction {
     static sigmoid(x) {
@@ -267,6 +270,18 @@ class Tensor {
 
     static log(m) {
         return m.apply_unitary_op(Math.log);
+    }
+
+    static one_hot_encoding(data, num_classes) {
+        let o = new Tensor(Array(data.length * num_classes), [
+            data.length,
+            num_classes,
+        ]);
+        o.zeros();
+        for (let i = 0; i < data.length; i++) {
+            o.set([i, data[i]], 1);
+        }
+        return o;
     }
 }
 
@@ -643,7 +658,7 @@ class Linear {
         let b_ = new Tensor(Array(n_output), [1, n_output]);
         W_.random();
         b_.random();
-        this.W = new Variable(W_, null);
+        this.W = new Variable(W_.times(1 / n_input), null);
         this.b = new Variable(b_, null);
     }
 

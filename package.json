@@ -4,7 +4,7 @@
   "description": "simple neural network library (inspired by torch) written in vanilla js for study purposes.",
   "main": "src/nn.js",
   "scripts": {
-    "test": "node test/test.js"
+    "test": "node test/simple_nn.js"
   },
   "repository": {
     "type": "git",
