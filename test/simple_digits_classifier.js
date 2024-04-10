@@ -31,11 +31,11 @@ readInterface.on("line", (line) => {
 readInterface.on("close", () => {
     // After finishing reading the file we start training our model
     let model = new Sequential([
-        new Linear(64, 32),
-        new ReLU(),
-        new Linear(32, 32),
-        new ReLU(),
-        new Linear(32, 10),
+        new Linear(64, 10),
+        // new ReLU(),
+        // new Linear(32, 32),
+        // new ReLU(),
+        // new Linear(32, 10),
         new Softmax(),
     ]);
 
@@ -66,8 +66,8 @@ readInterface.on("close", () => {
         cur += n;
     }
 
-    let optim = new SGD(model.parameters(), { lr: 0.5 });
-    let epochs = 10;
+    let optim = new SGD(model.parameters(), { lr: 0.1 });
+    let epochs = 30;
     for (let epoch = 0; epoch < epochs; epoch++) {
         let tot_loss = 0;
         for (let i = 0; i < xs.length; i++) {
@@ -80,8 +80,10 @@ readInterface.on("close", () => {
         }
         console.log(tot_loss);
     }
-    // console.log(model.forward(xs[0]).val.data);
-    // console.log(ys[0]);
+    let o = model.forward(xs[0]);
+    o = Tensor.argmax(o.val, 1);
+    console.log(o);
+    console.log(Tensor.argmax(ys[0].val, 1));
 });
 
 readInterface.on("error", (err) => {

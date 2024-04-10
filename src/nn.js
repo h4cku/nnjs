@@ -283,12 +283,30 @@ class Tensor {
         }
         return o;
     }
+    static argmax(m, axis) {
+        let new_shape = [...m.shape];
+        new_shape[axis] = 1;
+        let o = new Tensor(Array(m.get_dim() / m.shape[axis]), new_shape);
+        o.zeros();
+        for (let i = 0; i < m.data.length; i++) {
+            let curr_val = m.data[i];
+            let idx = m.get_idx(i)
+            let new_idx = [...idx];
+            let curr_pos = idx[axis];
+            new_idx[axis] = 0;
+            idx[axis] = o.at(new_idx);
+            if (m.at(idx) > curr_val) {
+                o.set(new_idx, curr_pos)
+            }
+        }
+        return o;
+    }
 }
 
 // Backward Classes
 class NopBackward {
-    constructor() {}
-    call(loss) {}
+    constructor() { }
+    call(loss) { }
 }
 
 class SumBackward {
@@ -673,7 +691,7 @@ class Linear {
 }
 
 class Sigmoid {
-    constructor() {}
+    constructor() { }
 
     parameters() {
         return [];
@@ -685,7 +703,7 @@ class Sigmoid {
 }
 
 class Tanh {
-    constructor() {}
+    constructor() { }
 
     parameters() {
         return [];
@@ -697,7 +715,7 @@ class Tanh {
 }
 
 class ReLU {
-    constructor() {}
+    constructor() { }
 
     parameters() {
         return [];
@@ -709,7 +727,7 @@ class ReLU {
 }
 
 class GELU {
-    constructor() {}
+    constructor() { }
 
     parameters() {
         return [];
@@ -721,7 +739,7 @@ class GELU {
 }
 
 class SILU {
-    constructor() {}
+    constructor() { }
 
     parameters() {
         return [];
@@ -733,7 +751,7 @@ class SILU {
 }
 
 class Softmax {
-    constructor() {}
+    constructor() { }
 
     parameters() {
         return [];
