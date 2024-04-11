@@ -290,23 +290,26 @@ class Tensor {
         o.zeros();
         for (let i = 0; i < m.data.length; i++) {
             let curr_val = m.data[i];
-            let idx = m.get_idx(i)
+            let idx = m.get_idx(i);
             let new_idx = [...idx];
             let curr_pos = idx[axis];
             new_idx[axis] = 0;
             idx[axis] = o.at(new_idx);
-            if (m.at(idx) > curr_val) {
-                o.set(new_idx, curr_pos)
+            if (m.at(idx) < curr_val) {
+                o.set(new_idx, curr_pos);
             }
         }
         return o;
+    }
+    static like(m) {
+        return new Tensor(Array(m.get_dim()), [...m.shape]);
     }
 }
 
 // Backward Classes
 class NopBackward {
-    constructor() { }
-    call(loss) { }
+    constructor() {}
+    call(loss) {}
 }
 
 class SumBackward {
@@ -669,6 +672,81 @@ class SGD {
     }
 }
 
+class Adam {
+    constructor(params, hparams) {
+        this.params = params;
+        this.lr = hparams.lr ? hparams.lr : 0.1;
+        this.beta1 = hparams.beta1 ? hparams.beta1 : 0.9;
+        this.beta2 = hparams.beta2 ? hparams.beta2 : 0.999;
+        this.eps = hparams.eps ? hparams.eps : 1e-8;
+        this.weight_decay = hparams.weight_decay ? hparams.weight_decay : 0;
+        this.m = [];
+        this.v = [];
+        this.t = 1;
+        for (let i = 0; i < this.params.length; i++) {
+            let tmpM = new Tensor(Array(this.params[i].grad.get_dim()), [
+                ...this.params[i].grad.shape,
+            ]);
+            tmpM.zeros();
+            let tmpV = new Tensor(Array(this.params[i].grad.get_dim()), [
+                ...this.params[i].grad.shape,
+            ]);
+            tmpV.zeros();
+            this.m.push(tmpM);
+            this.v.push(tmpV);
+        }
+        this.helper_m = (m, g) => {
+            return m * this.beta1 + (1 - this.beta1) * g;
+        };
+
+        this.helper_v = (v, g) => {
+            return v * this.beta2 + (1 - this.beta2) * g ** 2;
+        };
+        this.helper_g = (mh, vh) => {
+            return (this.lr * mh) / (Math.sqrt(vh) + this.eps);
+        };
+    }
+
+    zero_grad() {
+        for (let i = 0; i < this.params.length; i++) {
+            this.params[i].zero_grad();
+        }
+    }
+
+    step() {
+        let g = [];
+        let mh = [];
+        let vh = [];
+        this.params.forEach((param) => {
+            g.push(param.grad);
+        });
+        if (this.weight_decay != 0) {
+            for (let i = 0; i < this.params.length; i++) {
+                g[i] = g[i].add(this.params[i].val.times(this.weight_decay));
+            }
+        }
+        // Update momentum
+        this.m.forEach((mi, i, arr) => {
+            this.m[i] = mi.apply_binary_op(g[i], this.helper_m);
+        });
+        this.v.forEach((vi, i, arr) => {
+            this.v[i] = vi.apply_binary_op(g[i], this.helper_v);
+        });
+        this.m.forEach((mi, i, arr) => {
+            mh.push(mi.times(1 / (1 - this.beta1 ** this.t)));
+        });
+        this.v.forEach((vi, i, arr) => {
+            vh.push(vi.times(1 / (1 - this.beta2 ** this.t)));
+        });
+        for (let i = 0; i < this.params.length; i++) {
+            this.params[i].val = this.params[i].val.sub(
+                mh[i].apply_binary_op(vh[i], this.helper_g)
+            );
+        }
+        this.t += 1;
+    }
+}
+
 // Nerual Network Layers
 class Linear {
     constructor(n_input, n_output) {
@@ -691,7 +769,7 @@ class Linear {
 }
 
 class Sigmoid {
-    constructor() { }
+    constructor() {}
 
     parameters() {
         return [];
@@ -703,7 +781,7 @@ class Sigmoid {
 }
 
 class Tanh {
-    constructor() { }
+    constructor() {}
 
     parameters() {
         return [];
@@ -715,7 +793,7 @@ class Tanh {
 }
 
 class ReLU {
-    constructor() { }
+    constructor() {}
 
     parameters() {
         return [];
@@ -727,7 +805,7 @@ class ReLU {
 }
 
 class GELU {
-    constructor() { }
+    constructor() {}
 
     parameters() {
         return [];
@@ -739,7 +817,7 @@ class GELU {
 }
 
 class SILU {
-    constructor() { }
+    constructor() {}
 
     parameters() {
         return [];
@@ -751,7 +829,7 @@ class SILU {
 }
 
 class Softmax {
-    constructor() { }
+    constructor() {}
 
     parameters() {
         return [];
@@ -792,6 +870,7 @@ export {
     NopBackward,
     Loss,
     SGD,
+    Adam,
     Linear,
     Sigmoid,
     Tanh,
